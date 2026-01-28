@@ -1,0 +1,61 @@
+# Fichier utilisateur dbt
+dbt/.user.yml
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+*.egg-info/
+
+# VS Code
+.vscode/
+
+# Airflow
+airflow/logs/
+airflow/_airflow_home/logs/
+airflow/_airflow_home/dags/__pycache__/
+airflow/_airflow_home/dags/*.pyc
+airflow/_airflow_home/project/__pycache__/
+airflow/_airflow_home/project/*.pyc
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/.dbt/
+dbt/.pytest_cache/
+dbt/.coverage
+
+# Données temporaires
+data/tmp/
+data/kaggle/_dl/
+data/sample/
+
+# Secrets
+secrets/
+*.json
+
+# Fichiers d'environnement
+.env
+.env.*
+
+# Autres
+.DS_Store
+Thumbs.db
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+secrets/*
+airflow/_airflow_home/*
+airflow/logs/*
+dbt/logs/*

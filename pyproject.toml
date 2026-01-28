@@ -1,0 +1,16 @@
+[project]
+name = "vertexops-pipeline"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "google-cloud-bigquery>=3.40.0",
+    "google-cloud-storage>=3.8.0",
+    "joblib>=1.5.3",
+    "kaggle>=1.8.3",
+    "pandas>=3.0.0",
+    "pyarrow>=23.0.0",
+    "python-dotenv>=1.2.1",
+    "scikit-learn>=1.8.0",
+]

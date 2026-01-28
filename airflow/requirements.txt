@@ -1,0 +1,7 @@
+dbt-bigquery==1.11.0
+google-cloud-storage<3.2
+google-cloud-bigquery
+google-cloud-aiplatform
+google-cloud-build
+python-dotenv
+kaggle

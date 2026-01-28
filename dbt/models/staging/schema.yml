@@ -1,0 +1,28 @@
+version: 2
+
+sources:
+  - name: raw
+    database: "{{ env_var('PROJECT_ID') }}"
+    schema: "{{ env_var('BQ_RAW_DATASET') }}"
+    tables:
+      - name: raw_resume_screening
+
+models:
+  - name: stg_resume_screening
+    columns:
+      - name: years_experience
+        tests: [not_null]
+      - name: skills_match_score
+        tests: [not_null]
+      - name: education_level
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["bachelors", "masters", "high school", "phd", "associate", "diploma"]
+      - name: shortlisted_raw
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["yes", "no"]

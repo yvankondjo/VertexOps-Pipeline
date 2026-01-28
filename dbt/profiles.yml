@@ -1,0 +1,11 @@
+vertexops:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('PROJECT_ID') }}"
+      dataset: "{{ env_var('BQ_ANALYTICS_DATASET') }}"
+      location: "{{ env_var('BQ_LOCATION', 'EU') }}"
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      threads: 4

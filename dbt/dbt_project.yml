@@ -1,0 +1,13 @@
+name: "vertexops"
+version: "1.0.0"
+config-version: 2
+profile: "vertexops"
+
+model-paths: ["models"]
+
+models:
+  vertexops:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

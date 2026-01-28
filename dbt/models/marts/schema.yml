@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: mart_resume_features
+    columns:
+      - name: is_shortlisted
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+                quote: false

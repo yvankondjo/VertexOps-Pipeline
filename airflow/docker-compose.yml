@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  airflow:
+    build: .
+    depends_on:
+      - postgres
+    env_file:
+      - ../.env
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin123
+      
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/secrets/gcp/sa.json
+      KAGGLE_CONFIG_DIR: /opt/airflow/secrets/kaggle
+      PYTHONPATH: /opt/airflow/project
+    volumes:
+      - ../:/opt/airflow/project
+      - ./dags:/opt/airflow/dags
+      - ../secrets:/opt/airflow/secrets:ro
+      - ./data:/opt/airflow/data
+      - ./logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow standalone
+      "
+
+volumes:
+  postgres_data:
