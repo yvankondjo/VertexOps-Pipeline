@@ -144,16 +144,15 @@ def main() -> None:
     param_grid = {
         "model__n_estimators": [100, 200],
         "model__max_depth": [None, 10],
-        "model__min_samples_split": [2, 5],
     }
 
-    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    cv = StratifiedKFold(n_splits=2, shuffle=True, random_state=42)
     grid_search = GridSearchCV(
         estimator=pipeline,
         param_grid=param_grid,
         cv=cv,
         scoring="f1",
-        n_jobs=2,
+        n_jobs=1,
     )
     grid_search.fit(X_train, y_train)
 
