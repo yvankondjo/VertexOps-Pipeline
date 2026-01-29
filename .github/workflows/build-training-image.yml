@@ -6,6 +6,7 @@ on:
     paths:
       - "ml/training/**"
       - ".github/workflows/build-training-image.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
