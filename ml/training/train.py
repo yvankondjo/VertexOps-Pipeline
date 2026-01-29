@@ -11,7 +11,7 @@ import pandas as pd
 from google.cloud import storage
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import accuracy_score, f1_score
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
@@ -141,33 +141,19 @@ def main() -> None:
 
     pipeline = build_pipeline(categorical_cols, numeric_cols)
 
-    param_grid = {
-        "model__n_estimators": [100, 200],
-        "model__max_depth": [None, 10],
-    }
+    pipeline.fit(X_train, y_train)
 
-    cv = StratifiedKFold(n_splits=2, shuffle=True, random_state=42)
-    grid_search = GridSearchCV(
-        estimator=pipeline,
-        param_grid=param_grid,
-        cv=cv,
-        scoring="f1",
-        n_jobs=1,
-    )
-    grid_search.fit(X_train, y_train)
-
-    best_model = grid_search.best_estimator_
-    preds = best_model.predict(X_test)
+    preds = pipeline.predict(X_test)
     metrics = {
         "accuracy": accuracy_score(y_test, preds),
         "f1": f1_score(y_test, preds),
         "n_train": len(X_train),
         "n_test": len(X_test),
-        "best_params": grid_search.best_params_,
-        "cv_best_score": grid_search.best_score_,
+        "best_params": None,
+        "cv_best_score": None,
     }
 
-    save_model(best_model, args.model_dir)
+    save_model(pipeline, args.model_dir)
     save_metrics(metrics, args.model_dir)
 
     print("Training complete. Metrics:")
