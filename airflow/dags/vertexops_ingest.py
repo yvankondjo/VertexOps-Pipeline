@@ -72,16 +72,6 @@ with DAG(
     ),
     )
 
-    build_training_image = BashOperator(
-        task_id="build_push_training_image",
-        bash_command=(
-            "python /opt/airflow/project/ml/training/trigger_cloud_build.py "
-            "--project ${PROJECT_ID} "
-            "--staging_bucket ${GCS_BUCKET} "
-            "--image_uri europe-west1-docker.pkg.dev/${PROJECT_ID}/ml-training/resume-ml-trainer:latest"
-        ),
-    )
-
     vertex_train = BashOperator(
         task_id="vertexai_train_deploy",
         bash_command=(
@@ -96,4 +86,4 @@ with DAG(
     )
 
 
-    rows >> dbt_run >> build_training_image >> vertex_train
+    rows >> dbt_run >> vertex_train

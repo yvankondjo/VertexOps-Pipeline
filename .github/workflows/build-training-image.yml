@@ -1,0 +1,35 @@
+name: Build and Push Training Image
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "ml/training/**"
+      - ".github/workflows/build-training-image.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker europe-west1-docker.pkg.dev
+
+      - name: Build and push image
+        run: |
+          IMAGE_URI=europe-west1-docker.pkg.dev/vertexops-pipeline/ml-training/resume-ml-trainer:latest
+          docker build -f ml/training/Dockerfile -t $IMAGE_URI .
+          docker push $IMAGE_URI
