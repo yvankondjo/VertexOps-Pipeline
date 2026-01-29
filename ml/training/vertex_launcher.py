@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from datetime import datetime
+from pathlib import Path
 
 from google.cloud import aiplatform
+from google.cloud import storage
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,15 +53,47 @@ def main() -> None:
         ),
     )
 
-    endpoint = aiplatform.Endpoint.create(
-        display_name=f"{args.display_name}-endpoint"
+    storage_client = storage.Client(project=args.project)
+    bucket = storage_client.bucket(args.bucket)
+    metrics_blob = bucket.blob(f"ml/models/{timestamp}/metrics.json")
+    metrics = json.loads(metrics_blob.download_as_text())
+    new_f1 = metrics.get("f1", 0.0)
+
+    endpoints = aiplatform.Endpoint.list(
+        filter=f'display_name="{args.display_name}-endpoint"'
     )
-    endpoint.deploy(
-        model=uploaded_model,
-        deployed_model_display_name=f"{args.display_name}-deploy",
-        machine_type="n1-standard-2",
-        traffic_split={"0": 100},
-    )
+    if endpoints:
+        endpoint = endpoints[0]
+    else:
+        endpoint = aiplatform.Endpoint.create(
+            display_name=f"{args.display_name}-endpoint"
+        )
+
+    deployed_models = endpoint.list_models()
+    current_f1 = None
+    if deployed_models:
+        current_model_id = deployed_models[0].model
+        current_model = aiplatform.Model(current_model_id)
+        current_metrics_path = current_model.artifact_uri
+        if current_metrics_path:
+            bucket_name, blob_path = current_metrics_path.replace("gs://", "").split("/", 1)
+            current_blob = storage_client.bucket(bucket_name).blob(f"{blob_path}/metrics.json")
+            if current_blob.exists():
+                current_metrics = json.loads(current_blob.download_as_text())
+                current_f1 = current_metrics.get("f1")
+
+    should_deploy = current_f1 is None or new_f1 > float(current_f1)
+
+    if should_deploy:
+        endpoint.deploy(
+            model=uploaded_model,
+            deployed_model_display_name=f"{args.display_name}-deploy",
+            machine_type="n1-standard-2",
+            traffic_split={"0": 100},
+        )
+        print(f"Deployed new model (F1={new_f1}).")
+    else:
+        print(f"Skipped deploy. New F1={new_f1} <= current F1={current_f1}.")
 
 
 if __name__ == "__main__":

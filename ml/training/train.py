@@ -8,6 +8,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+from google.cloud import storage
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
@@ -34,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model_dir",
-        required=True,
+        default=os.getenv("AIP_MODEL_DIR"),
         help="Output directory for model artifacts (local or GCS path).",
     )
     parser.add_argument(
@@ -81,15 +82,40 @@ def build_pipeline(categorical_cols: list[str], numeric_cols: list[str]) -> Pipe
     )
 
 
-def save_metrics(metrics: dict[str, float], output_dir: Path) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    metrics_path = output_dir / "metrics.json"
-    with metrics_path.open("w", encoding="utf-8") as handle:
-        json.dump(metrics, handle, indent=2)
+def save_metrics(metrics: dict[str, float], output_dir: str) -> None:
+    if output_dir.startswith("gs://"):
+        bucket_name, blob_path = output_dir[5:].split("/", 1)
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(f"{blob_path}/metrics.json")
+        blob.upload_from_string(json.dumps(metrics, indent=2), content_type="application/json")
+    else:
+        path = Path(output_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        metrics_path = path / "metrics.json"
+        with metrics_path.open("w", encoding="utf-8") as handle:
+            json.dump(metrics, handle, indent=2)
+
+
+def save_model(model: Pipeline, output_dir: str) -> None:
+    if output_dir.startswith("gs://"):
+        bucket_name, blob_path = output_dir[5:].split("/", 1)
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(f"{blob_path}/model.joblib")
+        blob.upload_from_string(joblib.dumps(model))
+    else:
+        path = Path(output_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        model_path = path / "model.joblib"
+        joblib.dump(model, model_path)
 
 
 def main() -> None:
     args = parse_args()
+    if not args.model_dir:
+        raise ValueError("model_dir is required (or set AIP_MODEL_DIR)")
+
     df = load_training_data(args.bq_table)
 
     if args.label not in df.columns:
@@ -116,18 +142,18 @@ def main() -> None:
     pipeline = build_pipeline(categorical_cols, numeric_cols)
 
     param_grid = {
-        "model__n_estimators": [100, 200, 300],
-        "model__max_depth": [None, 10, 20],
-        "model__min_samples_split": [2, 5, 10],
+        "model__n_estimators": [100, 200],
+        "model__max_depth": [None, 10],
+        "model__min_samples_split": [2, 5],
     }
 
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
     grid_search = GridSearchCV(
         estimator=pipeline,
         param_grid=param_grid,
         cv=cv,
         scoring="f1",
-        n_jobs=-1,
+        n_jobs=2,
     )
     grid_search.fit(X_train, y_train)
 
@@ -142,11 +168,8 @@ def main() -> None:
         "cv_best_score": grid_search.best_score_,
     }
 
-    output_dir = Path(args.model_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    model_path = output_dir / "model.joblib"
-    joblib.dump(best_model, model_path)
-    save_metrics(metrics, output_dir)
+    save_model(best_model, args.model_dir)
+    save_metrics(metrics, args.model_dir)
 
     print("Training complete. Metrics:")
     print(json.dumps(metrics, indent=2))
