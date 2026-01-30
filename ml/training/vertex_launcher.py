@@ -41,7 +41,7 @@ def main() -> None:
             f"--model_dir={model_dir}",
         ],
         replica_count=1,
-        machine_type="n1-standard-8",
+        machine_type="n1-standard-4",
         sync=True,
     )
 
