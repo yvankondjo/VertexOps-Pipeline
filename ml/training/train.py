@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model_dir",
-        default=os.getenv("AIP_MODEL_DIR"),
+        default=os.getenv("AIP_MODEL_DIR", "/opt/airflow/project/artifacts"),
         help="Output directory for model artifacts (local or GCS path).",
     )
     parser.add_argument(
@@ -44,27 +44,37 @@ def parse_args() -> argparse.Namespace:
         default=0.2,
         help="Test split ratio.",
     )
+    parser.add_argument(
+        "--bq_location",
+        default=os.getenv("BQ_LOCATION", "EU"),
+        help="BigQuery dataset location (EU/US).",
+    )
     return parser.parse_args()
 
 
-def load_training_data(table: str) -> pd.DataFrame:
+def load_training_data(table: str, location: str) -> pd.DataFrame:
     client = bigquery.Client()
     query = f"SELECT * FROM `{table}`"
-    return client.query(query).to_dataframe()
+    job = client.query(query, location=location)
+    return job.to_dataframe(create_bqstorage_client=False)
 
 
-def build_pipeline(categorical_cols: list[str], numeric_cols: list[str]) -> Pipeline:
+def build_pipeline(
+    categorical_cols: list[str],
+    numeric_cols: list[str],
+    feature_order: list[str],
+) -> Pipeline:
     preprocess = ColumnTransformer(
         transformers=[
             (
                 "categorical",
                 OneHotEncoder(handle_unknown="ignore"),
-                categorical_cols,
+                [feature_order.index(col) for col in categorical_cols],
             ),
             (
                 "numeric",
                 StandardScaler(),
-                numeric_cols,
+                [feature_order.index(col) for col in numeric_cols],
             ),
         ]
     )
@@ -116,20 +126,27 @@ def main() -> None:
     if not args.model_dir:
         raise ValueError("model_dir is required (or set AIP_MODEL_DIR)")
 
-    df = load_training_data(args.bq_table)
+    df = load_training_data(args.bq_table, args.bq_location)
 
     if args.label not in df.columns:
         raise ValueError(f"Label column '{args.label}' not found in training data")
+
+    if df.empty:
+        raise ValueError(
+            "Training data is empty. Check that mart_resume_features has rows "
+            "and that the dataset/table name is correct."
+        )
 
     df = df.dropna(subset=[args.label]).copy()
 
     X = df.drop(columns=[args.label])
     y = df[args.label]
 
+    feature_order = list(X.columns)
     categorical_cols = [
-        col for col in X.columns if X[col].dtype == "object" or X[col].dtype.name == "category"
+        col for col in feature_order if X[col].dtype == "object" or X[col].dtype.name == "category"
     ]
-    numeric_cols = [col for col in X.columns if col not in categorical_cols]
+    numeric_cols = [col for col in feature_order if col not in categorical_cols]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -139,7 +156,7 @@ def main() -> None:
         random_state=42,
     )
 
-    pipeline = build_pipeline(categorical_cols, numeric_cols)
+    pipeline = build_pipeline(categorical_cols, numeric_cols, feature_order)
 
     pipeline.fit(X_train, y_train)
 
@@ -154,6 +171,7 @@ def main() -> None:
     }
 
     save_model(pipeline, args.model_dir)
+    save_metrics({"feature_order": feature_order}, args.model_dir)
     save_metrics(metrics, args.model_dir)
 
     print("Training complete. Metrics:")

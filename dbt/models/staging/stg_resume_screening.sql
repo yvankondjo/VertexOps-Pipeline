@@ -11,6 +11,10 @@ select
   safe_cast(github_activity as int64) as github_activity,
 
 
-  lower(trim(cast(shortlisted as string))) as shortlisted_raw
+  case
+    when lower(trim(cast(shortlisted as string))) in ('yes', 'true', '1') then 'yes'
+    when lower(trim(cast(shortlisted as string))) in ('no', 'false', '0') then 'no'
+    else null
+  end as shortlisted_raw
 from src
-where lower(trim(cast(shortlisted as string))) in ('yes', 'no')
+where lower(trim(cast(shortlisted as string))) in ('yes', 'true', '1', 'no', 'false', '0')

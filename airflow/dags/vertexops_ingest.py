@@ -79,9 +79,9 @@ with DAG(
             "--project ${PROJECT_ID} "
             "--region europe-west1 "
             "--bucket ${GCS_BUCKET} "
-            "--bq_table ${PROJECT_ID}.${BQ_ML_DATASET}.mart_resume_features "
+            "--bq_table ${PROJECT_ID}.vertexops_analytics.mart_resume_features "
             "--label is_shortlisted "
-            "--training_image europe-west1-docker.pkg.dev/${PROJECT_ID}/ml-training/resume-ml-trainer:latest"
+            "--force_deploy"
         ),
     )
 

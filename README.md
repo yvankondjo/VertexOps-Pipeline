@@ -5,15 +5,27 @@ End-to-end data + ML pipeline using **Airflow**, **dbt**, **BigQuery**, **Vertex
 
 ---
 
-## Architecture — Data (Medallion)
+## Architecture — Data + MLOps (End-to-End)
 
 ```mermaid
 flowchart LR
-  A[CSV/Kaggle Source] --> B[Airflow Ingestion]
-  B --> C[BigQuery Bronze (raw)]
-  C --> D[dbt Staging (Silver)]
-  D --> E[dbt Marts (Gold)]
-  E --> F[Looker / BI]
+  U["User"] --> UI["PC / Streamlit UI"];
+
+  K["Kaggle API\nResume Dataset"] --> G["GCS Bucket (Raw)"];
+  G --> AQ["Airflow Ingestion"];
+  AQ --> BQ1["BigQuery Bronze (raw)"];
+  BQ1 --> DBT1["dbt Staging (Silver)"];
+  DBT1 --> DBT2["dbt Marts (Gold)"];
+
+  DBT2 --> FEAT["Feature Table (BigQuery)"];
+  FEAT --> LOCAL["Local Training"];
+  LOCAL --> VTX["Vertex AI Training"];
+  VTX --> REG["Model Registry"];
+  REG --> EP["Vertex AI Endpoint"];
+  EP --> UI;
+
+  DBT2 --> LOOK["Looker Dashboard"];
+  UI --> LOOK;
 ```
 
 ### Medallion Layers
@@ -27,13 +39,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  A[GitHub Actions
-Build & Push Image] --> B[Artifact Registry]
-  C[Airflow DAG] --> D[Vertex AI Training]
-  D --> E[Model Registry]
-  E --> F[Vertex AI Endpoint]
-  G[BigQuery Gold Features] --> D
-  F --> H[Streamlit App]
+  A["GitHub Actions\nBuild & Push Image"] --> B["Artifact Registry"]
+  C["Airflow DAG"] --> D["Vertex AI Training"]
+  D --> E["Model Registry"]
+  E --> F["Vertex AI Endpoint"]
+  G["BigQuery Gold Features"] --> D
+  F --> H["Streamlit App"]
 ```
 
 ---

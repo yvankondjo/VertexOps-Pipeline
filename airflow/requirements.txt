@@ -4,3 +4,6 @@ google-cloud-bigquery
 google-cloud-aiplatform
 python-dotenv
 kaggle
+pandas<3
+scikit-learn==1.2.2
+joblib
