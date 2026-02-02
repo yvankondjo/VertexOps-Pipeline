@@ -11,20 +11,26 @@ End-to-end data + ML pipeline using **Airflow**, **dbt**, **BigQuery**, **Vertex
 flowchart LR
   U["User"] --> UI["PC / Streamlit UI"];
 
+  %% Medallion (Ingestion + ELT)
   K["Kaggle API\nResume Dataset"] --> G["GCS Bucket (Raw)"];
   G --> AQ["Airflow Ingestion"];
   AQ --> BQ1["BigQuery Bronze (raw)"];
   BQ1 --> DBT1["dbt Staging (Silver)"];
   DBT1 --> DBT2["dbt Marts (Gold)"];
 
-  DBT2 --> FEAT["Feature Table (BigQuery)"];
-  FEAT --> LOCAL["Local Training"];
+  %% Two downstream tables
+  DBT2 --> BQ_LOOK["Looker Table (BigQuery)"];
+  DBT2 --> BQ_ML["ML Training Table (BigQuery)"];
+
+  %% ML training + serving
+  BQ_ML --> LOCAL["Local Training"];
   LOCAL --> VTX["Vertex AI Training"];
   VTX --> REG["Model Registry"];
   REG --> EP["Vertex AI Endpoint"];
   EP --> UI;
 
-  DBT2 --> LOOK["Looker Dashboard"];
+  %% BI & consumption
+  BQ_LOOK --> LOOK["Looker Dashboard"];
   UI --> LOOK;
 ```
 
