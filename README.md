@@ -7,10 +7,12 @@ End-to-end data + ML pipeline using **Airflow**, **dbt**, **BigQuery**, **Vertex
 
 ## Architecture — Data + MLOps (End-to-End)
 
+![Architecture Diagram](images/Architecture.jpeg)
+
 ```mermaid
 flowchart LR
   U[User] --> UI[Streamlit UI]
-  UI -->|4. Inference| EP[Vertex AI Endpoint]
+  UI -->|6. Inference| EP[Vertex AI Endpoint]
 
   subgraph DOCKER[Docker Runtime]
     direction LR
@@ -28,12 +30,12 @@ flowchart LR
         DBT2 --> GOLD_ML[Gold Table - ML]
       end
 
-      GOLD_ML -->|3. Training| LOCAL[Local Training]
-      LOCAL --> REG[Model Registry]
+      GOLD_ML -->|4. Local Training| LOCAL[Local Training]
+      LOCAL -->|5. Deployment| REG[Model Registry]
       REG --> EP
     end
 
-    GOLD_BI -->|Visualization| LOOK[Looker Dashboard]
+    GOLD_BI -->|3. Visualization| LOOK[Looker Dashboard]
   end
 
   %% Styling
@@ -101,7 +103,10 @@ The training task uses the pre-built image from Artifact Registry.
 
 ---
 
-## Streamlit Demo (coming)
+## Streamlit Demo
+
+![Streamlit Prediction Success](images/prediction%20success.png)
+
 Run the app to test predictions:
 
 ```powershell
@@ -122,28 +127,5 @@ VERTEX_ENDPOINT_ID=<your-endpoint-id>
 You can render Mermaid diagrams into images with:
 - [Mermaid Live Editor](https://mermaid.live/)
 - VS Code extension: **Mermaid Preview**
-
-**Prompt FigJam (aligned with the diagram):**
-> Create a clean left-to-right architecture diagram titled “VertexOps Pipeline – End-to-End”. Use a white background, rounded rectangles, and consistent spacing. Keep a single horizontal flow with straight arrows.
->
-> **Containers:** Add a large outer container labeled “Docker Runtime” (light gray outline, Docker whale icon in the label, top-left). Inside it, add a second container labeled “Airflow Orchestration” (light blue outline, Airflow logo in the label, top-left). Inside Airflow, add a third container labeled “Medallion Architecture” with a thin gray outline and a centered label.
->
-> **Nodes inside Medallion Architecture (left to right):** Kaggle API / Resume Dataset → GCS Bucket – Raw → BigQuery Bronze – raw → dbt Staging – Silver → dbt Marts – Gold → split into Gold Table – Visualization and Gold Table – ML.
->
-> **Arrow labeling details:**
-> - Label “1. Ingestion” above the arrow from Kaggle API / Resume Dataset → GCS Bucket – Raw only.
-> - Label “2. Transformation” above the arrow from BigQuery Bronze – raw → dbt Staging – Silver only.
-> - Label “3. Training” above the arrow from Gold Table – ML → Local Training only.
-> - Label “4. Inference” above the arrow from Streamlit UI → Vertex AI Endpoint only.
->
-> **Visualization branch:** Gold Table – Visualization → Looker Dashboard. Looker is outside Airflow but still inside Docker. Add a label “Visualization” above this arrow.
->
-> **ML branch (inside Airflow):** Gold Table – ML → Local Training → Model Registry → Vertex AI Endpoint. Remove the Vertex AI Training node. Only the first arrow (Gold Table – ML → Local Training) carries the “3. Training” label; the remaining arrows are unlabeled.
->
-> **User & Inference:** Place User outside Docker with a small user icon. Place Streamlit UI outside Docker and outside Airflow. Connect User → Streamlit UI. Connect Streamlit UI → Vertex AI Endpoint with label “4. Inference”. Do not connect Streamlit to Looker.
->
-> **Color palette:** GCP services (GCS, BigQuery, Vertex AI) light blue boxes. dbt nodes light orange boxes. UI/Looker nodes soft pink boxes. Neutral nodes (Kaggle, Local Training, User) light gray. Keep typography consistent, align nodes horizontally, and maintain clear arrow routing for one-glance readability.
-
----
 
 If you need WIF setup commands or the promotion logic, ask and I’ll provide them.
