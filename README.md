@@ -9,49 +9,52 @@ End-to-end data + ML pipeline using **Airflow**, **dbt**, **BigQuery**, **Vertex
 
 ```mermaid
 flowchart LR
-  U["User"] --> UI["PC / Streamlit UI"];
+  U[User] --> UI[Streamlit UI]
+  UI -->|4. Inference| EP[Vertex AI Endpoint]
 
-  %% CI/CD container build
-  GH["GitHub Actions\nBuild & Push Image"] --> AR["Artifact Registry"];
+  subgraph DOCKER[Docker Runtime]
+    direction LR
 
-  subgraph MED["Medallion Architecture (Ingestion + ELT)"]
-    K["Kaggle API\nResume Dataset"] --> G["GCS Bucket (Raw)"];
-    G --> AQ["Airflow Ingestion"];
-    AQ --> BQ1["BigQuery Bronze (raw)"];
-    BQ1 --> DBT1["dbt Staging (Silver)"];
-    DBT1 --> DBT2["dbt Marts (Gold)"];
-  end
+    UI
 
-  %% Two downstream tables
-  DBT2 --> BQ_LOOK["Looker Table (BigQuery)"];
-  DBT2 --> BQ_ML["ML Training Table (BigQuery)"];
+    subgraph AIRFLOW[Airflow Orchestration]
+      direction LR
 
-  subgraph MLS["ML Training + Serving"]
-    BQ_ML --> LOCAL["Local Training"];
-    LOCAL --> VTX["Vertex AI Training"];
-    AR --> VTX;
-    VTX --> REG["Model Registry"];
-    REG --> EP["Vertex AI Endpoint"];
-    EP --> UI;
-  end
+      subgraph MED[Medallion Architecture]
+        direction LR
+        K[Kaggle API\nResume Dataset] -->|1. Ingestion| G[GCS Bucket - Raw]
+        G --> BQ1[BigQuery Bronze - raw]
+        BQ1 -->|2. Transformation| DBT1[dbt Staging - Silver]
+        DBT1 --> DBT2[dbt Marts - Gold]
+        DBT2 --> GOLD_BI[Gold Table - Visualization]
+        DBT2 --> GOLD_ML[Gold Table - ML]
+      end
 
-  subgraph CONS["Consumption"]
-    BQ_LOOK --> LOOK["Looker Dashboard"];
-    UI --> LOOK;
+      GOLD_ML -->|3. Training| LOCAL[Local Training]
+      LOCAL --> VTX[Vertex AI Training]
+      VTX --> REG[Model Registry]
+      REG --> EP
+    end
+
+    GOLD_BI --> LOOK[Looker Dashboard]
   end
 
   %% Styling
-  classDef gcp fill:#E8F0FE,stroke:#1A73E8,stroke-width:1px,color:#174EA6;
-  classDef dbt fill:#FFF3E0,stroke:#F57C00,stroke-width:1px,color:#E65100;
-  classDef airflow fill:#E3F2FD,stroke:#1E88E5,stroke-width:1px,color:#0D47A1;
-  classDef ui fill:#FCE4EC,stroke:#D81B60,stroke-width:1px,color:#880E4F;
-  classDef neutral fill:#F5F5F5,stroke:#9E9E9E,stroke-width:1px,color:#424242;
+  classDef gcp fill:#E8F0FE,stroke:#1A73E8,stroke-width:1px,color:#174EA6
+  classDef dbt fill:#FFF3E0,stroke:#F57C00,stroke-width:1px,color:#E65100
+  classDef airflow fill:#E3F2FD,stroke:#1E88E5,stroke-width:1px,color:#0D47A1
+  classDef ui fill:#FCE4EC,stroke:#D81B60,stroke-width:1px,color:#880E4F
+  classDef neutral fill:#F5F5F5,stroke:#9E9E9E,stroke-width:1px,color:#424242
+  classDef container fill:#FFFFFF,stroke:#616161,stroke-width:1px,color:#212121
 
-  class G,BQ1,BQ_LOOK,BQ_ML,VTX,REG,EP,AR gcp;
-  class DBT1,DBT2 dbt;
-  class AQ airflow;
-  class UI,LOOK ui;
-  class U,LOCAL,GH,K neutral;
+  class G,BQ1,VTX,REG,EP gcp
+  class DBT1,DBT2,GOLD_BI,GOLD_ML dbt
+  class UI,LOOK ui
+  class U,LOCAL,K neutral
+
+  style DOCKER fill:#FFFFFF,stroke:#424242,stroke-width:2px,color:#212121
+  style AIRFLOW fill:#F7FBFF,stroke:#1E88E5,stroke-width:2px,color:#0D47A1
+  style MED fill:#FFFFFF,stroke:#9E9E9E,stroke-width:1px,color:#424242
 ```
 
 ### Medallion Layers
@@ -122,7 +125,5 @@ VERTEX_ENDPOINT_ID=<your-endpoint-id>
 You can render Mermaid diagrams into images with:
 - [Mermaid Live Editor](https://mermaid.live/)
 - VS Code extension: **Mermaid Preview**
-
----
 
 If you need WIF setup commands or the promotion logic, ask and I’ll provide them.
