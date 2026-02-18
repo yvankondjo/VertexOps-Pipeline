@@ -63,9 +63,6 @@ flowchart LR
 
 ---
 
-## CI/CD — GitHub Actions
-- Build & push training image to Artifact Registry.
-- Workflow: `.github/workflows/build-training-image.yml`
 
 Reproducible setup (run once):
 ```powershell
@@ -77,11 +74,6 @@ Image URI (example):
 europe-west1-docker.pkg.dev/vertexops-pipeline/ml-training/resume-ml-trainer:latest
 ```
 
-Required GitHub secrets:
-- `GCP_WIF_PROVIDER`
-- `GCP_SERVICE_ACCOUNT`
-
----
 
 ## Orchestration — Airflow
 Pipeline:
