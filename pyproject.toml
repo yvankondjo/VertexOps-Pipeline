@@ -1,7 +1,7 @@
 [project]
 name = "vertexops-pipeline"
 version = "0.1.0"
-description = "Add your description here"
+description = "End-to-end MLOps demo with Airflow, dbt, BigQuery, Vertex AI, and Streamlit"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -13,6 +13,43 @@ dependencies = [
     "pandas>=2.0.0,<3.0.0",
     "pyarrow>=23.0.0",
     "python-dotenv>=1.2.1",
-    "scikit-learn==1.2.2",
+    "pyyaml>=6.0.2",
+    "scikit-learn>=1.5.2,<2.0.0",
     "streamlit>=1.36.0",
 ]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15.0",
+    "pytest>=8.3.5",
+    "ruff>=0.11.7",
+    "types-PyYAML>=6.0.12.20250915",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["app", "jobs", "ml", "tests"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+files = ["app", "jobs", "ml", "tests"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "app.streamlit_app",
+    "jobs.ingest_resume_screening",
+    "ml.training.train",
+    "ml.training.vertex_launcher",
+    "tests.*",
+]
+disable_error_code = ["attr-defined"]

@@ -1,123 +1,69 @@
 # VertexOps Pipeline
 
-## Overview
-End-to-end data + ML pipeline using **Airflow**, **dbt**, **BigQuery**, **Vertex AI**, and **Looker**.
-
----
-
-## Architecture — Data + MLOps (End-to-End)
+End-to-end MLOps demo that connects Airflow orchestration, dbt transformations, BigQuery storage, Vertex AI training and deployment, and a Streamlit inference UI.
 
 ![Architecture Diagram](images/Architecture.jpeg)
 
-```mermaid
-flowchart LR
-  U[User] --> UI[Streamlit UI]
-  UI -->|6. Inference| EP[Vertex AI Endpoint]
+## What this repo demonstrates
 
-  subgraph DOCKER[Docker Runtime]
-    direction LR
+The pipeline ingests a resume-screening dataset, transforms it into analytics and ML-ready tables, trains a scikit-learn model, and exposes predictions through a Streamlit interface backed by Vertex AI.
 
-    subgraph AIRFLOW[Airflow Orchestration]
-      direction LR
-
-      subgraph MED[Medallion Architecture]
-        direction LR
-        K[Kaggle API\nResume Dataset] -->|1. Ingestion| G[GCS Bucket - Raw]
-        G --> BQ1[BigQuery Bronze - raw]
-        BQ1 -->|2. Transformation| DBT1[dbt Staging - Silver]
-        DBT1 --> DBT2[dbt Marts - Gold]
-        DBT2 --> GOLD_BI[Gold Table - Visualization]
-        DBT2 --> GOLD_ML[Gold Table - ML]
-      end
-
-      GOLD_ML -->|4. Local Training| LOCAL[Local Training]
-      LOCAL -->|5. Deployment| REG[Model Registry]
-      REG --> EP
-    end
-
-    GOLD_BI -->|3. Visualization| LOOK[Looker Dashboard]
-  end
-
-  %% Styling
-  classDef gcp fill:#E8F0FE,stroke:#1A73E8,stroke-width:1px,color:#174EA6
-  classDef dbt fill:#FFF3E0,stroke:#F57C00,stroke-width:1px,color:#E65100
-  classDef airflow fill:#E3F2FD,stroke:#1E88E5,stroke-width:1px,color:#0D47A1
-  classDef ui fill:#FCE4EC,stroke:#D81B60,stroke-width:1px,color:#880E4F
-  classDef neutral fill:#F5F5F5,stroke:#9E9E9E,stroke-width:1px,color:#424242
-  classDef container fill:#FFFFFF,stroke:#616161,stroke-width:1px,color:#212121
-
-  class G,BQ1,REG,EP gcp
-  class DBT1,DBT2,GOLD_BI,GOLD_ML dbt
-  class UI,LOOK ui
-  class U,LOCAL,K neutral
-
-  style DOCKER fill:#FFFFFF,stroke:#424242,stroke-width:2px,color:#212121
-  style AIRFLOW fill:#F7FBFF,stroke:#1E88E5,stroke-width:2px,color:#0D47A1
-  style MED fill:#FFFFFF,stroke:#9E9E9E,stroke-width:1px,color:#424242
-```
-
-### Medallion Layers
-- **Bronze (raw)**: `raw_resume_screening`
-- **Silver (staging)**: `stg_resume_screening`
-- **Gold (marts)**: `mart_resume_features`
-
----
-
-
-Reproducible setup (run once):
-```powershell
-pwsh scripts/bootstrap_mlops_ci_cd.ps1 -ProjectId vertexops-pipeline
-```
-
-Image URI (example):
-```
-europe-west1-docker.pkg.dev/vertexops-pipeline/ml-training/resume-ml-trainer:latest
-```
-
-
-## Orchestration — Airflow
-Pipeline:
-```
-ingest → dbt build → vertexai train/deploy
-```
-
-The training task uses the pre-built image from Artifact Registry.
-
----
-
-## Training + Deployment — Vertex AI
-`ml/training/vertex_launcher.py`:
-- launches a Custom Container training job
-- uploads model to Model Registry
-- deploys the model to an endpoint
-
-**Promotion rule:** deploy only if the new model is better (F1).
-
----
-
-## Streamlit Demo
-
-![Streamlit Prediction Success](images/prediction%20success.png)
-
-Run the app to test predictions:
+## Main entrypoints
 
 ```powershell
-uv sync
+uv sync --group dev
+uv run python scripts/test_ingest_e2e.py
+uv run python ml/training/vertex_launcher.py --project <project> --bucket <bucket> --bq_table <project.dataset.table>
 uv run streamlit run app/streamlit_app.py
 ```
 
-Set environment variables (optional):
-```
+## Environment variables
+
+```env
 PROJECT_ID=vertexops-pipeline
 REGION=europe-west1
-VERTEX_ENDPOINT_ID=<your-endpoint-id>
+GCS_BUCKET=<bucket-name>
+BQ_RAW_DATASET=vertexops_raw
+BQ_LOCATION=EU
+VERTEX_AI_ENDPOINT=<endpoint-id>
 ```
 
----
+The Streamlit app also accepts `VERTEX_ENDPOINT_ID` for backward compatibility.
 
-## Diagram as interactive image
-You can render Mermaid diagrams into images with:
-- [Mermaid Live Editor](https://mermaid.live/)
-- VS Code extension: **Mermaid Preview**
+## Quality gates
 
-If you need WIF setup commands or the promotion logic, ask and I’ll provide them.
+```powershell
+uv run pytest
+uv run ruff check app jobs ml tests
+uv run mypy
+```
+
+The CI workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs:
+
+- import and smoke tests for the Airflow DAG
+- ingestion job tests with mocked GCS and BigQuery clients
+- local training smoke tests
+- Streamlit prediction smoke tests without cloud calls
+- dbt project structure validation
+
+## What is intentionally not claimed
+
+This repository does not currently ship a production image-build workflow or a cloud deployment pipeline in GitHub Actions. The committed CI focuses on code quality and smoke validation that can run reliably on every push.
+
+## Project layout
+
+```text
+airflow/         DAG and local Airflow assets
+app/             Streamlit UI
+dbt/             dbt project and schema contracts
+jobs/            ingestion helpers for GCS and BigQuery
+ml/training/     local training and Vertex AI deployment scripts
+scripts/         bootstrap and end-to-end helper scripts
+tests/           smoke tests and repo validation
+```
+
+## Notes
+
+- `app/streamlit_app.py` now logs prediction events instead of printing debug payloads.
+- `pyproject.toml` includes dev tooling for `pytest`, `ruff`, and `mypy`.
+- The README only documents workflows that exist in the repository today.

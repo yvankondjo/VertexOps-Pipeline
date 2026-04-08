@@ -7,9 +7,9 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any, cast
 
-from google.cloud import aiplatform
-from google.cloud import storage
+from google.cloud import aiplatform, storage
 
 
 def parse_args() -> argparse.Namespace:
@@ -114,7 +114,7 @@ def main() -> None:
     should_deploy = args.force_deploy or current_f1 is None or new_f1 > float(current_f1)
 
     if should_deploy:
-        deploy_op = endpoint.deploy(
+        deploy_op: Any = cast(Any, endpoint).deploy(
             model=uploaded_model,
             deployed_model_display_name=f"{args.display_name}-deploy",
             machine_type="n1-standard-2",

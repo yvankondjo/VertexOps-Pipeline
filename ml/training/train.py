@@ -8,15 +8,13 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from google.cloud import storage
+from google.cloud import bigquery, storage
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-
-from google.cloud import bigquery
 
 
 def parse_args() -> argparse.Namespace:
@@ -92,7 +90,7 @@ def build_pipeline(
     )
 
 
-def save_metrics(metrics: dict[str, float], output_dir: str) -> None:
+def save_metrics(metrics: dict[str, object], output_dir: str) -> None:
     if output_dir.startswith("gs://"):
         bucket_name, blob_path = output_dir[5:].split("/", 1)
         storage_client = storage.Client()

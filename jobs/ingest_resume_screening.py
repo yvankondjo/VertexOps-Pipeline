@@ -1,7 +1,10 @@
-from pathlib import Path
-import os, shutil
-from google.cloud import storage, bigquery
+import os
+import shutil
 from datetime import datetime, timezone
+from pathlib import Path
+
+from google.cloud import bigquery, storage
+
 DATASET_SLUG = "sonalshinde123/ai-driven-resume-screening-dataset"
 
 def choose_source() -> str:
@@ -14,7 +17,7 @@ def download_kaggle_dataset(dataset: str, kaggle_json_path: Path, download_path:
         raise FileNotFoundError(f"Missing Kaggle key: {kaggle_json_path}")
 
     os.environ["KAGGLE_CONFIG_DIR"] = str(kaggle_json_path.parent.resolve())
-    from kaggle.api.kaggle_api_extended import KaggleApi  
+    from kaggle.api.kaggle_api_extended import KaggleApi
 
     download_path.mkdir(parents=True, exist_ok=True)
 
@@ -44,7 +47,13 @@ def upload_to_gcs(project_id: str, bucket_name: str, local_file: Path, gcs_path:
     return f"gs://{bucket_name}/{gcs_path}"
 
 
-def ingest_in_bigquery(project_id: str, dataset_id: str, table_name: str, gcs_uri: str, location: str = "EU") -> int:
+def ingest_in_bigquery(
+    project_id: str,
+    dataset_id: str,
+    table_name: str,
+    gcs_uri: str,
+    location: str = "EU",
+) -> int:
     client = bigquery.Client(project=project_id)
 
     table_id = f"{project_id}.{dataset_id}.{table_name}"  
@@ -55,7 +64,12 @@ def ingest_in_bigquery(project_id: str, dataset_id: str, table_name: str, gcs_ur
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
     )
 
-    load_job = client.load_table_from_uri(gcs_uri, table_id, job_config=job_config, location=location)
+    load_job = client.load_table_from_uri(
+        gcs_uri,
+        table_id,
+        job_config=job_config,
+        location=location,
+    )
     load_job.result()
 
     return client.get_table(table_id).num_rows
